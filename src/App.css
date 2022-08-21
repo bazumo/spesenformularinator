@@ -1,0 +1,24 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.expenseForm {
+  gap: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.expenseForm input {
+  display: block;
+}
+
+.sigCanvasYou {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.sigCanvasBoard {
+  background-color: rgba(0, 0, 0, 0.1);
+}
