@@ -1,13 +1,16 @@
 #root {
   margin: 0 auto;
   padding: 2rem;
-  text-align: center;
 }
 
 .expenseForm {
   gap: 10px;
   display: flex;
   flex-direction: column;
+}
+
+.expenseForm input {
+  display: block;
 }
 
 .expenseForm input {

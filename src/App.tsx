@@ -12,14 +12,13 @@ const OFFSETS = {
   NAME: [310, 720],
   COMMITTEE_AND_EVENT: [310, 635],
   PURPOSE: [310, 574],
-  AMOUNT: [310, 515],
-  DATE_RECEIPT: [310, 450],
-  DATE_TODAY: [310, 385],
+  AMOUNT: [310, 513],
+  DATE_RECEIPT: [440, 450],
+  DATE_TODAY: [440, 385],
   SIGNATURE_RECIEVER: [310, 319],
   SIGNATURE_BOARD: [310, 255],
   COMMENTS: [20, 162],
   MONEY_CHECKBOX: [22, 125],
-
   PAYER_LINE_1: [20, 87],
   PAYER_LINE_2: [20, 49],
 };
@@ -57,14 +56,90 @@ async function createExpensePDF(expense: ExpenseInfo): Promise<PDFDocument> {
   page.moveTo(OFFSETS.PURPOSE[0], OFFSETS.PURPOSE[1]);
   page.drawText(expense.purpose);
 
-  page.moveTo(OFFSETS.AMOUNT[0], OFFSETS.AMOUNT[1]);
-  page.drawText(`${expense.amount} CHF`);
+  page.setFontSize(20);
 
-  page.moveTo(OFFSETS.DATE_RECEIPT[0], OFFSETS.DATE_RECEIPT[1]);
-  page.drawText(expense.dateReceipt);
+  const digits_franken = Math.floor(expense.amount)
+    .toString()
+    .padStart(4, " ")
+    .split("");
+  const digits_rappen = expense.amount.toFixed(2).split(".")[1].split("");
 
-  page.moveTo(OFFSETS.DATE_TODAY[0], OFFSETS.DATE_TODAY[1]);
-  page.drawText(expense.dateToday);
+  page.drawText(digits_franken[0], {
+    x: OFFSETS.AMOUNT[0] + 130,
+    y: OFFSETS.AMOUNT[1],
+  });
+
+  page.drawText(digits_franken[1], {
+    x: OFFSETS.AMOUNT[0] + 158,
+    y: OFFSETS.AMOUNT[1],
+  });
+
+  page.drawText(digits_franken[2], {
+    x: OFFSETS.AMOUNT[0] + 183,
+    y: OFFSETS.AMOUNT[1],
+  });
+
+  page.drawText(digits_franken[3], {
+    x: OFFSETS.AMOUNT[0] + 206,
+    y: OFFSETS.AMOUNT[1],
+  });
+
+  page.drawText(digits_rappen[0], {
+    x: OFFSETS.AMOUNT[0] + 234,
+    y: OFFSETS.AMOUNT[1],
+  });
+
+  page.drawText(digits_rappen[1], {
+    x: OFFSETS.AMOUNT[0] + 256,
+    y: OFFSETS.AMOUNT[1],
+  });
+
+  function fillDateInBoxesAt(date_string: string, x: number, y: number) {
+    const date = new Date(date_string);
+    const dateYearDigits = (date.getFullYear() % 100).toString().split("");
+    const dateMonthDigits = (date.getMonth() + 1) // L M A O
+      .toString()
+      .padStart(2, "0")
+      .split("");
+    const dateDateDigits = date.getDate().toString().padStart(2, " ").split("");
+    console.log(dateMonthDigits);
+    page.drawText(dateYearDigits[0] ?? "", {
+      x: x + 0,
+      y,
+    });
+    page.drawText(dateYearDigits[1] ?? "", {
+      x: x + 22,
+      y,
+    });
+    page.drawText(dateMonthDigits[0] ?? "", {
+      x: x + 52,
+      y,
+    });
+    page.drawText(dateMonthDigits[1] ?? "", {
+      x: x + 76,
+      y,
+    });
+    page.drawText(dateDateDigits[0] ?? "", {
+      x: x + 103,
+      y,
+    });
+    page.drawText(dateDateDigits[1] ?? "", {
+      x: x + 124,
+      y,
+    });
+  }
+
+  fillDateInBoxesAt(
+    expense.dateReceipt,
+    OFFSETS.DATE_RECEIPT[0],
+    OFFSETS.DATE_RECEIPT[1]
+  );
+
+  fillDateInBoxesAt(
+    expense.dateToday,
+    OFFSETS.DATE_TODAY[0],
+    OFFSETS.DATE_TODAY[1]
+  );
 
   if (expense.signatureReciever) {
     page.moveTo(OFFSETS.SIGNATURE_RECIEVER[0], OFFSETS.SIGNATURE_RECIEVER[1]);
@@ -178,6 +253,7 @@ function App() {
       <div className="split">
         <main>
           <form className="expenseForm">
+            <label>First name</label>
             <input
               type="text"
               placeholder="First name"
@@ -186,6 +262,8 @@ function App() {
                 setExpense({ ...expense, firstName: e.target.value })
               }
             />
+            <label>Last name</label>
+
             <input
               type="text"
               placeholder="Last name"
@@ -194,6 +272,7 @@ function App() {
               }
               value={expense.lastName}
             />
+            <label>Budgetary Item</label>
             <input
               type="text"
               placeholder="Budgetary Item"
@@ -202,6 +281,7 @@ function App() {
               }
               value={expense.committee}
             />
+            <label>Purpose</label>
             <input
               type="text"
               placeholder="Purpose"
@@ -210,14 +290,18 @@ function App() {
               }
               value={expense.purpose}
             />
+            <label>Amount</label>
+
             <input
               type="number"
+              max={9999}
               placeholder="Amount in CHF"
               onChange={(e) =>
                 setExpense({ ...expense, amount: parseFloat(e.target.value) })
               }
               value={expense.amount}
             />
+            <label>Date on receipt</label>
             <input
               type="date"
               placeholder="Date on receipt"
@@ -226,6 +310,7 @@ function App() {
                 setExpense({ ...expense, dateReceipt: e.target.value })
               }
             />
+            <label>Today's date</label>
             <input
               type="date"
               placeholder="Todays date"
@@ -234,6 +319,7 @@ function App() {
                 setExpense({ ...expense, dateToday: e.target.value })
               }
             />
+            <label>Comment</label>
             <input
               type="text"
               placeholder="Comments"
@@ -242,6 +328,8 @@ function App() {
               }
               value={expense.comments}
             />
+            <label>Address</label>
+
             <input
               type="text"
               placeholder="Address"
@@ -250,6 +338,7 @@ function App() {
               }
               value={expense.address}
             />
+            <label>IBAN</label>
             <input
               type="text"
               placeholder="IBAN"
