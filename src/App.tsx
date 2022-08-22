@@ -103,11 +103,11 @@ async function createExpensePDF(expense: ExpenseInfo): Promise<PDFDocument> {
       .split("");
     const dateDateDigits = date.getDate().toString().padStart(2, " ").split("");
     console.log(dateMonthDigits);
-    page.drawText(dateYearDigits[0] ?? "", {
+    page.drawText(dateDateDigits[0] ?? "", {
       x: x + 0,
       y,
     });
-    page.drawText(dateYearDigits[1] ?? "", {
+    page.drawText(dateDateDigits[1] ?? "", {
       x: x + 22,
       y,
     });
@@ -119,11 +119,11 @@ async function createExpensePDF(expense: ExpenseInfo): Promise<PDFDocument> {
       x: x + 76,
       y,
     });
-    page.drawText(dateDateDigits[0] ?? "", {
+    page.drawText(dateYearDigits[0] ?? "", {
       x: x + 103,
       y,
     });
-    page.drawText(dateDateDigits[1] ?? "", {
+    page.drawText(dateYearDigits[1] ?? "", {
       x: x + 124,
       y,
     });
