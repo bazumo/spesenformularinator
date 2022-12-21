@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import "./App.css";
 import { PDFDocument, rgb } from "pdf-lib";
 import FileSaver from "file-saver";
 import { useAtom } from "jotai";
@@ -206,6 +205,8 @@ const currentFormStateAtom = atomWithStorage<ExpenseInfo>("currentFormState", {
   iban: "",
 });
 
+const savedExpensesAtom = atomWithStorage<ExpenseInfo[]>("savedExpenses", []);
+
 function App() {
   const [expense, setExpense] = useAtom(currentFormStateAtom);
   const [pdfSrc, setPdfSrc] = useState("");
@@ -403,14 +404,69 @@ function App() {
             </button>
           </form>
         </main>
-        <aside>
+        <aside className="preview">
           <div className="pdfContainer">
             <div className="pdf">
               <iframe src={pdfSrc} title="pdf" />
             </div>
           </div>
         </aside>
+        <aside className="savedExpenses">
+          <SavedExpensesPane></SavedExpensesPane>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+function SavedExpensesPaneItem(props: {
+  expense: ExpenseInfo;
+  onDelete: () => void;
+  onLoad: () => void;
+}) {
+  return (
+    <li>
+      <p>Purpose: {props.expense.purpose}</p>
+      <p>Amount: {props.expense.amount} CHF</p>
+      <div className="actions">
+        <button onClick={props.onDelete}>Delete</button>
+        <button onClick={props.onLoad}>Load</button>
+      </div>
+    </li>
+  );
+}
+
+// TODO improve delete and load to net create function for each item
+function SavedExpensesPane() {
+  const [savedExpenses, setSavedExpense] = useAtom(savedExpensesAtom);
+  const [expense, setExpense] = useAtom(currentFormStateAtom);
+
+  return (
+    <div className="savedExpensesPane">
+      <h3>Saved expenses</h3>
+      <ul>
+        {savedExpenses.map((expense, i) => (
+          <SavedExpensesPaneItem
+            expense={expense}
+            key={i}
+            onDelete={() =>
+              setSavedExpense((old) => old.filter((e) => e != expense))
+            }
+            onLoad={() => setExpense(expense)}
+          />
+        ))}
+        <li>
+          <button
+            onClick={() =>
+              setSavedExpense((old) => {
+                return [...old, expense];
+              })
+            }
+          >
+            Add
+          </button>
+        </li>
+      </ul>
     </div>
   );
 }

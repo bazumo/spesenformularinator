@@ -6,13 +6,27 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+
+
+  --alabaster-50: #f9f9f9;
+  --alabaster-100: #f0f0f0;
+  --alabaster-200: #e4e4e4;
+  --alabaster-300: #d1d1d1;
+  --alabaster-400: #b4b4b4;
+  --alabaster-500: #9a9a9a;
+  --alabaster-600: #818181;
+  --alabaster-700: #6a6a6a;
+  --alabaster-800: #5a5a5a;
+  --alabaster-900: #4e4e4e;
+
+
 }
 
 a {
@@ -37,6 +51,10 @@ h1 {
   line-height: 1.1;
 }
 
+h3 {
+  margin-block-start: 0;
+}
+
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -56,7 +74,104 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+
+
+
+.savedExpensesPane ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+width: 300px;
+}
+
+.savedExpensesPane li {
+  padding: 0.5em;
+  border-radius: 12px;
+}
+
+.savedExpensesPane .actions {
+  display: flex;
+  gap: 0.5em;
+}
+
+
+
+
+
+#root {
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.expenseForm {
+  gap: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.expenseForm input {
+  display: block;
+}
+
+.expenseForm input {
+  display: block;
+}
+
+.sigCanvasYou {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.sigCanvasBoard {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+}
+
+.split main {
+  max-width: 300px;
+}
+
+.split aside {}
+
+.pdfContainer iframe {
+  width: 500px;
+  height: 600px;
+}
+
+
+@media (prefers-color-scheme: dark) {
+  .savedExpensesPane li {
+    background-color: var(--alabaster-900);
+  }
+  :root {
+    color: var(--alabaster-50);
+    background-color: #242424;
+    ;
+  }
+  
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: var( --alabaster-800);
+  }
+
+  iframe {
+    filter: invert(1);
+  }
+}
+
 @media (prefers-color-scheme: light) {
+  .savedExpensesPane li {
+    background-color: var(--alabaster-100);
+  }
   :root {
     color: #213547;
     background-color: #ffffff;
@@ -65,6 +180,6 @@ button:focus-visible {
     color: #747bff;
   }
   button {
-    background-color: #f9f9f9;
+    background-color: var(--alabaster-200);
   }
 }
