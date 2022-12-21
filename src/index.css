@@ -7,13 +7,14 @@
     @apply text-xl;
   }
   input {
-    @apply rounded-md px-2 py-1;
+    @apply rounded-md px-2 py-1 bg-zinc-100 dark:bg-zinc-800;
   }
   iframe {
     @apply dark:invert;
   }
   button, [type='button'], [type='reset'], [type='submit'] {
-    @apply rounded-md bg-zinc-200 dark:bg-zinc-800 select-none px-2 py-1 text-sm transition-colors duration-200 ease-in-out border-transparent border hover:bg-indigo-700;
+    @apply rounded-md bg-zinc-200 dark:bg-zinc-800 select-none px-2 py-1 text-sm transition-colors duration-200 ease-in-out border-transparent border;
+    @apply hover:bg-zinc-300 dark:hover:bg-zinc-700;
   }
   label {
     @apply select-none;

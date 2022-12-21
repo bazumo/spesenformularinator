@@ -56,6 +56,7 @@ function SignaturePad(props: {
   onData: (data: string) => void;
   data: string;
   label: string;
+  penColor?: string;
 }) {
   const ref = useRef<ReactSignatureCanvas>(null);
 
@@ -70,17 +71,19 @@ function SignaturePad(props: {
     console.log("scaled"); fuck this */
   }, [ref]);
 
+  const penColor = props.penColor ?? "black";
+
   return (
     <div>
       <div className="relative w-[250px] h-[200px]">
         <div className="absolute">
           <SignatureCanvas
-            penColor="red"
+            penColor={penColor}
             ref={ref}
             canvasProps={{
-              width: 500,
+              width: 250,
               height: 200,
-              className: "w-[250px] h-[200px] bg-zinc-900",
+              className: "w-[250px] h-[200px] bg-zinc-50 dark:bg-zinc-900",
             }}
             onEnd={() => {
               props.onData(ref.current?.toDataURL() ?? "");
@@ -290,6 +293,7 @@ function ExpenseForm(props: {
                     });
                   }}
                   label="Your signature"
+                  penColor="red"
                 ></SignaturePad>
 
                 <SignaturePad
@@ -304,6 +308,7 @@ function ExpenseForm(props: {
                     });
                   }}
                   label="Boardmemeber signature"
+                  penColor="green"
                 ></SignaturePad>
               </section>
             </div>
@@ -354,9 +359,10 @@ function DocumentTab(props: {
   return (
     <div
       className={classNames({
-        "min-w-[250px] h-[100px] flex flex-col justify-center p-3 items-center bg-zinc-800 rounded-xl gap-2 group cursor-pointer dark:hover:bg-zinc-700":
+        "min-w-[250px] h-[100px] flex flex-col justify-center p-3 items-center rounded-xl gap-2 group cursor-pointer dark:hover:bg-zinc-700":
           true,
-        "bg-zinc-700": props.isActive,
+        "bg-zinc-300 dark:bg-zinc-700": props.isActive,
+        "bg-zinc-200 dark:bg-zinc-800": !props.isActive,
       })}
       onClick={props.onClick}
     >
@@ -476,7 +482,7 @@ function App() {
       <header className="px-4 py-2">
         <h1>Spesenformularinator</h1>
       </header>
-      <section className="flex px-4 mb-4 border-b-2 border-t-2 border-zinc-800 py-4 gap-4 max-w-[100vw] overflow-x-scroll">
+      <section className="flex px-4 mb-4 border-b-2 border-t-2 border-zinc-200 dark:border-zinc-800 py-4 gap-4 max-w-[100vw] overflow-x-scroll">
         <DocumentTab>
           <div
             className="dark:text-zinc-400 flex gap-2 items-baseline"
