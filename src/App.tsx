@@ -1,17 +1,14 @@
-import {
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useState } from "react";
 import FileSaver from "file-saver";
-import SignatureCanvas from "react-signature-canvas";
-import ReactSignatureCanvas from "react-signature-canvas";
 import { snakeCase } from "change-case";
 import { createExpensePDF } from "./createExpensePDF";
 import { v4 as uuidv4 } from "uuid";
 import classNames from "classnames";
+import { TEMPLATES } from "./TEMPLATES";
+import { Input } from "./Input";
+import { Button } from "./Button";
+import { SignaturePad } from "./SignaturePad";
+import { useDocumentStore } from "./useDocumentStore";
 
 export interface ExpenseMetadata {
   uuid: string;
@@ -32,81 +29,6 @@ export type ExpenseInfo = ExpenseMetadata & {
   address: string;
   iban: string;
 };
-
-// whatever an atomWithStorage
-
-function Input(
-  props: InputHTMLAttributes<HTMLInputElement> & { label?: string }
-) {
-  const { label, ...rest } = props;
-  return (
-    <div className="flex flex-col">
-      {label && <label className="text-xs">{label}</label>}
-      <input {...rest}></input>
-    </div>
-  );
-}
-
-function Button(props: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...props}></button>;
-}
-
-function SignaturePad(props: {
-  onClear: () => void;
-  onData: (data: string) => void;
-  data: string;
-  label: string;
-  penColor?: string;
-}) {
-  const ref = useRef<ReactSignatureCanvas>(null);
-
-  useEffect(() => {
-    /*
-    const canvas = sigCanvasYouRef.current?.getCanvas()!;
-    var ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.getContext("2d")!.scale(ratio, ratio); */
-    ref.current?.fromDataURL(props.data);
-    /*canvas.getContext("2d")!.scale(1 / ratio, 1 / ratio);
-
-    console.log("scaled"); fuck this */
-  }, [ref]);
-
-  const penColor = props.penColor ?? "black";
-
-  return (
-    <div>
-      <div className="relative w-[250px] h-[200px]">
-        <div className="absolute">
-          <SignatureCanvas
-            penColor={penColor}
-            ref={ref}
-            canvasProps={{
-              width: 250,
-              height: 200,
-              className: "w-[250px] h-[200px] bg-zinc-50 dark:bg-zinc-900",
-            }}
-            onEnd={() => {
-              props.onData(ref.current?.toDataURL() ?? "");
-            }}
-          />
-        </div>
-        <div className="flex gap-2 items-start justify-between mb-2 absolute w-[250px] h-[200px] p-2 pointer-events-none">
-          <label className="text-xs">{props.label}</label>
-          <button
-            type="button"
-            className="pointer-events-auto"
-            onClick={() => {
-              ref.current?.clear();
-              props.onClear();
-            }}
-          >
-            Clear signature
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ExpenseForm(props: {
   expense: ExpenseInfo;
@@ -371,91 +293,6 @@ function DocumentTab(props: {
   );
 }
 
-function getStorageValue<T>(key: string, defaultValue: T) {
-  // getting stored value
-  const saved = localStorage.getItem(key);
-  if (!saved) return defaultValue;
-  const initial = JSON.parse(saved) as T;
-  return initial;
-}
-
-export const useLocalStorage: <T>(
-  key: string,
-  defaultValue: T
-) => [T, React.Dispatch<React.SetStateAction<T>>] = (key, defaultValue) => {
-  const [value, setValue] = useState(() => {
-    return getStorageValue(key, defaultValue);
-  });
-
-  useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-
-  return [value, setValue];
-};
-
-function useDocumentStore<T extends { uuid: string }>(prefix: string) {
-  const [keys, setKeys] = useLocalStorage(`${prefix}-doclist`, [] as string[]);
-  const [docs, setDocs] = useState([] as T[]);
-
-  // refresh docs when keys change
-  useEffect(() => {
-    const docs = keys.map((key) =>
-      getStorageValue<any>(`${prefix}-${key}`, null)
-    );
-    setDocs(docs);
-  }, [keys]);
-
-  const updateDoc = (doc: T) => {
-    if (!keys.includes(doc.uuid)) {
-      throw new Error("Document not in list");
-    }
-    const key = `${prefix}-${doc.uuid}`;
-    localStorage.setItem(key, JSON.stringify(doc));
-    setDocs(docs.map((d) => (d.uuid === doc.uuid ? { ...doc } : d)));
-  };
-
-  const addDoc = (doc: T) => {
-    if (keys.includes(doc.uuid)) {
-      throw new Error("Document already in list");
-    }
-    const key = `${prefix}-${doc.uuid}`;
-    localStorage.setItem(key, JSON.stringify(doc));
-    setKeys([...keys, doc.uuid]);
-    // Docs update is handled by useEffect
-  };
-
-  const removeDoc = (doc: T) => {
-    if (!keys.includes(doc.uuid)) {
-      throw new Error("Document not in list");
-    }
-    const key = `${prefix}-${doc.uuid}`;
-    localStorage.removeItem(key);
-    setKeys(keys.filter((k) => k !== doc.uuid));
-    // Docs update is handled by useEffect
-  };
-
-  return {
-    keys,
-    docs,
-    updateDoc,
-    addDoc,
-    removeDoc,
-  };
-}
-
-const TEMPLATES: Record<string, Partial<ExpenseInfo>> = {
-  "CTF-food": {
-    formName: "CTF Food",
-    committee: "x031 Online CTF",
-    purpose: "Food for online ctf",
-  },
-  "CTF-organizers": {
-    formName: "CTF Organizers",
-    committee: "CTF organizers prize fond",
-  },
-};
-
 function App() {
   const {
     keys,
@@ -466,10 +303,6 @@ function App() {
   } = useDocumentStore<ExpenseInfo>("expense");
 
   const [currentExpense, setCurrentExpense] = useState<string>("");
-
-  console.log(keys, expenses, currentExpense);
-
-  useEffect(() => {});
 
   const expense = expenses.find((e) => e?.uuid === currentExpense);
 
