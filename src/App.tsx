@@ -1,181 +1,24 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { PDFDocument, rgb } from "pdf-lib";
+import {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import FileSaver from "file-saver";
-import { useAtom } from "jotai";
-import { atomWithStorage } from "jotai/utils";
 import SignatureCanvas from "react-signature-canvas";
 import ReactSignatureCanvas from "react-signature-canvas";
 import { snakeCase } from "change-case";
+import { createExpensePDF } from "./createExpensePDF";
+import { v4 as uuidv4 } from "uuid";
+import classNames from "classnames";
 
-const OFFSETS = {
-  NAME: [310, 720],
-  COMMITTEE_AND_EVENT: [310, 635],
-  PURPOSE: [310, 574],
-  AMOUNT: [310, 513],
-  DATE_RECEIPT: [440, 450],
-  DATE_TODAY: [440, 385],
-  SIGNATURE_RECIEVER: [310, 319],
-  SIGNATURE_BOARD: [310, 255],
-  COMMENTS: [20, 162],
-  MONEY_CHECKBOX: [22, 125],
-  PAYER_LINE_1: [20, 87],
-  PAYER_LINE_2: [20, 49],
-};
-
-// ghetto debug mode
-const DEBUG = false;
-
-// Warning - trash code ahead
-async function createExpensePDF(expense: ExpenseInfo): Promise<PDFDocument> {
-  const url = "/invoice.pdf";
-  const arrayBuffer = await fetch(url).then((res) => res.arrayBuffer());
-  const pdfDoc = await PDFDocument.load(arrayBuffer);
-  const pages = pdfDoc.getPages();
-  const page = pages[0];
-
-  page.setFontSize(16);
-
-  if (DEBUG) {
-    for (let i = 0; i < 10; i++) {
-      for (let j = 0; j < 10; j++) {
-        page.drawText(`${i} ${j}`);
-        page.moveTo(i * 100, j * 100);
-      }
-    }
-  }
-
-  const fullName = `${expense.firstName} ${expense.lastName}`;
-
-  page.setFontColor(rgb(0.8, 0, 0));
-
-  page.moveTo(OFFSETS.NAME[0], OFFSETS.NAME[1]);
-  page.drawText(fullName);
-  page.moveTo(OFFSETS.COMMITTEE_AND_EVENT[0], OFFSETS.COMMITTEE_AND_EVENT[1]);
-  page.drawText(expense.committee);
-  page.moveTo(OFFSETS.PURPOSE[0], OFFSETS.PURPOSE[1]);
-  page.drawText(expense.purpose);
-
-  page.setFontSize(20);
-
-  const digits_franken = Math.floor(expense.amount)
-    .toString()
-    .padStart(4, " ")
-    .split("");
-  const digits_rappen = expense.amount.toFixed(2).split(".")[1].split("");
-
-  page.drawText(digits_franken[0], {
-    x: OFFSETS.AMOUNT[0] + 130,
-    y: OFFSETS.AMOUNT[1],
-  });
-
-  page.drawText(digits_franken[1], {
-    x: OFFSETS.AMOUNT[0] + 158,
-    y: OFFSETS.AMOUNT[1],
-  });
-
-  page.drawText(digits_franken[2], {
-    x: OFFSETS.AMOUNT[0] + 183,
-    y: OFFSETS.AMOUNT[1],
-  });
-
-  page.drawText(digits_franken[3], {
-    x: OFFSETS.AMOUNT[0] + 206,
-    y: OFFSETS.AMOUNT[1],
-  });
-
-  page.drawText(digits_rappen[0], {
-    x: OFFSETS.AMOUNT[0] + 234,
-    y: OFFSETS.AMOUNT[1],
-  });
-
-  page.drawText(digits_rappen[1], {
-    x: OFFSETS.AMOUNT[0] + 256,
-    y: OFFSETS.AMOUNT[1],
-  });
-
-  function fillDateInBoxesAt(date_string: string, x: number, y: number) {
-    const date = new Date(date_string);
-    const dateYearDigits = (date.getFullYear() % 100).toString().split("");
-    const dateMonthDigits = (date.getMonth() + 1) // L M A O
-      .toString()
-      .padStart(2, "0")
-      .split("");
-    const dateDateDigits = date.getDate().toString().padStart(2, " ").split("");
-    console.log(dateMonthDigits);
-    page.drawText(dateDateDigits[0] ?? "", {
-      x: x + 0,
-      y,
-    });
-    page.drawText(dateDateDigits[1] ?? "", {
-      x: x + 22,
-      y,
-    });
-    page.drawText(dateMonthDigits[0] ?? "", {
-      x: x + 52,
-      y,
-    });
-    page.drawText(dateMonthDigits[1] ?? "", {
-      x: x + 76,
-      y,
-    });
-    page.drawText(dateYearDigits[0] ?? "", {
-      x: x + 103,
-      y,
-    });
-    page.drawText(dateYearDigits[1] ?? "", {
-      x: x + 124,
-      y,
-    });
-  }
-
-  fillDateInBoxesAt(
-    expense.dateReceipt,
-    OFFSETS.DATE_RECEIPT[0],
-    OFFSETS.DATE_RECEIPT[1]
-  );
-
-  fillDateInBoxesAt(
-    expense.dateToday,
-    OFFSETS.DATE_TODAY[0],
-    OFFSETS.DATE_TODAY[1]
-  );
-
-  if (expense.signatureReciever) {
-    page.moveTo(OFFSETS.SIGNATURE_RECIEVER[0], OFFSETS.SIGNATURE_RECIEVER[1]);
-    const signatureRecieverImg = await pdfDoc.embedPng(
-      expense.signatureReciever
-    );
-    page.drawImage(signatureRecieverImg, {
-      width: 120,
-      height: 40,
-    });
-  }
-
-  if (expense.signatureBoard) {
-    page.moveTo(OFFSETS.SIGNATURE_BOARD[0], OFFSETS.SIGNATURE_BOARD[1]);
-    const signatureBoardImg = await pdfDoc.embedPng(expense.signatureBoard);
-    page.drawImage(signatureBoardImg, {
-      width: 120,
-      height: 40,
-    });
-  }
-
-  page.moveTo(OFFSETS.MONEY_CHECKBOX[0], OFFSETS.MONEY_CHECKBOX[1]);
-  page.drawText("X");
-
-  page.setFontSize(12);
-  page.moveTo(OFFSETS.COMMENTS[0], OFFSETS.COMMENTS[1]);
-  page.drawText(expense.comments);
-
-  page.moveTo(OFFSETS.PAYER_LINE_1[0], OFFSETS.PAYER_LINE_1[1]);
-  page.drawText(`${fullName}, ${expense.address}`);
-  page.moveTo(OFFSETS.PAYER_LINE_2[0], OFFSETS.PAYER_LINE_2[1]);
-  page.drawText(`${expense.iban}`);
-
-  return pdfDoc;
+export interface ExpenseMetadata {
+  uuid: string;
+  formName: string;
+  internalNote: string;
 }
-
-interface ExpenseInfo {
+export type ExpenseInfo = ExpenseMetadata & {
   firstName: string;
   lastName: string;
   committee: string;
@@ -188,27 +31,86 @@ interface ExpenseInfo {
   comments: string;
   address: string;
   iban: string;
+};
+
+// whatever an atomWithStorage
+
+function Input(
+  props: InputHTMLAttributes<HTMLInputElement> & { label?: string }
+) {
+  const { label, ...rest } = props;
+  return (
+    <div className="flex flex-col">
+      {label && <label className="text-xs">{label}</label>}
+      <input {...rest}></input>
+    </div>
+  );
 }
 
-const currentFormStateAtom = atomWithStorage<ExpenseInfo>("currentFormState", {
-  firstName: "",
-  lastName: "",
-  committee: "",
-  purpose: "",
-  amount: 0,
-  dateReceipt: "",
-  dateToday: "",
-  signatureReciever: "",
-  signatureBoard: "",
-  comments: "",
-  address: "",
-  iban: "",
-});
+function Button(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type="button" {...props}></button>;
+}
 
-const savedExpensesAtom = atomWithStorage<ExpenseInfo[]>("savedExpenses", []);
+function SignaturePad(props: {
+  onClear: () => void;
+  onData: (data: string) => void;
+  data: string;
+  label: string;
+}) {
+  const ref = useRef<ReactSignatureCanvas>(null);
 
-function App() {
-  const [expense, setExpense] = useAtom(currentFormStateAtom);
+  useEffect(() => {
+    /*
+    const canvas = sigCanvasYouRef.current?.getCanvas()!;
+    var ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.getContext("2d")!.scale(ratio, ratio); */
+    ref.current?.fromDataURL(props.data);
+    /*canvas.getContext("2d")!.scale(1 / ratio, 1 / ratio);
+
+    console.log("scaled"); fuck this */
+  }, [ref]);
+
+  return (
+    <div>
+      <div className="relative w-[250px] h-[200px]">
+        <div className="absolute">
+          <SignatureCanvas
+            penColor="red"
+            ref={ref}
+            canvasProps={{
+              width: 500,
+              height: 200,
+              className: "w-[250px] h-[200px] bg-zinc-900",
+            }}
+            onEnd={() => {
+              props.onData(ref.current?.toDataURL() ?? "");
+            }}
+          />
+        </div>
+        <div className="flex gap-2 items-start justify-between mb-2 absolute w-[250px] h-[200px] p-2 pointer-events-none">
+          <label className="text-xs">{props.label}</label>
+          <button
+            type="button"
+            className="pointer-events-auto"
+            onClick={() => {
+              ref.current?.clear();
+              props.onClear();
+            }}
+          >
+            Clear signature
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExpenseForm(props: {
+  expense: ExpenseInfo;
+  setExpense: (expense: ExpenseInfo) => void;
+}) {
+  const { expense, setExpense } = props;
+
   const [pdfSrc, setPdfSrc] = useState("");
   const previewDocument = async () => {
     const pdfDoc = await createExpensePDF(expense);
@@ -233,240 +135,408 @@ function App() {
     FileSaver.saveAs(file, fileName);
   };
 
-  const sigCanvasYouRef = useRef<ReactSignatureCanvas>(null);
-  const sigCanvasBoardRef = useRef<ReactSignatureCanvas>(null);
-
-  useEffect(() => {
-    /*
-    const canvas = sigCanvasYouRef.current?.getCanvas()!;
-    var ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.getContext("2d")!.scale(ratio, ratio); */
-    sigCanvasYouRef.current?.fromDataURL(expense.signatureReciever);
-    sigCanvasBoardRef.current?.fromDataURL(expense.signatureBoard);
-    /*canvas.getContext("2d")!.scale(1 / ratio, 1 / ratio);
-
-    console.log("scaled"); fuck this */
-  }, [sigCanvasYouRef, sigCanvasBoardRef]);
-
   return (
-    <div className="App">
-      <h1>Spesenformularinator</h1>
-      <div className="split">
+    <>
+      <section className="px-4 py-2 flex flex-wrap flex-nowrap">
         <main>
-          <form className="expenseForm">
-            <label>First name</label>
-            <input
-              type="text"
-              placeholder="First name"
-              value={expense.firstName}
-              onChange={(e) =>
-                setExpense({ ...expense, firstName: e.target.value })
-              }
-            />
-            <label>Last name</label>
+          <form className="flex gap-2 flex-wrap">
+            <div className="flex flex-col gap-2 m-2 w-[250px] items-stretch">
+              <section className="flex flex-col">
+                <span>Meta data</span>
+                <Input
+                  type="text"
+                  label="Form name"
+                  placeholder="Form name"
+                  value={expense.formName}
+                  onChange={(e) =>
+                    setExpense({ ...expense, formName: e.target.value })
+                  }
+                />
+                <Input
+                  type="text"
+                  label="Internal note"
+                  placeholder="Internal note"
+                  value={expense.internalNote}
+                  onChange={(e) =>
+                    setExpense({ ...expense, internalNote: e.target.value })
+                  }
+                />
+              </section>
 
-            <input
-              type="text"
-              placeholder="Last name"
-              onChange={(e) =>
-                setExpense({ ...expense, lastName: e.target.value })
-              }
-              value={expense.lastName}
-            />
-            <label>Budgetary Item</label>
-            <input
-              type="text"
-              placeholder="Budgetary Item"
-              onChange={(e) =>
-                setExpense({ ...expense, committee: e.target.value })
-              }
-              value={expense.committee}
-            />
-            <label>Purpose</label>
-            <input
-              type="text"
-              placeholder="Purpose"
-              onChange={(e) =>
-                setExpense({ ...expense, purpose: e.target.value })
-              }
-              value={expense.purpose}
-            />
-            <label>Amount</label>
+              <section className="flex flex-col gap-2 m-2">
+                <span>Form data</span>
 
-            <input
-              type="number"
-              max={9999}
-              placeholder="Amount in CHF"
-              onChange={(e) =>
-                setExpense({ ...expense, amount: parseFloat(e.target.value) })
-              }
-              value={expense.amount}
-            />
-            <label>Date on receipt</label>
-            <input
-              type="date"
-              placeholder="Date on receipt"
-              value={expense.dateReceipt}
-              onChange={(e) =>
-                setExpense({ ...expense, dateReceipt: e.target.value })
-              }
-            />
-            <label>Today's date</label>
-            <input
-              type="date"
-              placeholder="Todays date"
-              value={expense.dateToday}
-              onChange={(e) =>
-                setExpense({ ...expense, dateToday: e.target.value })
-              }
-            />
-            <label>Comment</label>
-            <input
-              type="text"
-              placeholder="Comments"
-              onChange={(e) =>
-                setExpense({ ...expense, comments: e.target.value })
-              }
-              value={expense.comments}
-            />
-            <label>Address</label>
+                <Input
+                  type="text"
+                  label="Last name"
+                  placeholder="Last name"
+                  onChange={(e) =>
+                    setExpense({ ...expense, lastName: e.target.value })
+                  }
+                  value={expense.lastName}
+                />
 
-            <input
-              type="text"
-              placeholder="Address"
-              onChange={(e) =>
-                setExpense({ ...expense, address: e.target.value })
-              }
-              value={expense.address}
-            />
-            <label>IBAN</label>
-            <input
-              type="text"
-              placeholder="IBAN"
-              onChange={(e) => setExpense({ ...expense, iban: e.target.value })}
-              value={expense.iban}
-            />
-            <h3>Your signature</h3>
-            <button
-              type="button"
-              onClick={() => {
-                setExpense({ ...expense, signatureReciever: "" });
-                sigCanvasYouRef.current?.clear();
-              }}
-            >
-              Clear signature
-            </button>
-            <SignatureCanvas
-              penColor="red"
-              ref={sigCanvasYouRef}
-              canvasProps={{
-                width: 500,
-                height: 200,
-                className: "sigCanvasYou",
-              }}
-              onEnd={() => {
-                setExpense({
-                  ...expense,
-                  signatureReciever: sigCanvasYouRef.current?.toDataURL() ?? "",
-                });
-              }}
-            />
-            <h3>Boardmemeber signature</h3>
-            <button
-              onClick={() => {
-                setExpense({ ...expense, signatureBoard: "" });
-                sigCanvasBoardRef.current?.clear();
-              }}
-              type="button"
-            >
-              Clear signature
-            </button>
-            <SignatureCanvas
-              penColor="green"
-              canvasProps={{
-                width: 500,
-                height: 200,
-                className: "sigCanvasBoard",
-              }}
-              ref={sigCanvasBoardRef}
-              onEnd={() =>
-                setExpense({
-                  ...expense,
-                  signatureBoard: sigCanvasBoardRef.current?.toDataURL() ?? "",
-                })
-              }
-            />
-            <button type="button" onClick={() => previewDocument()}>
-              Preview PDF
-            </button>
-            <button type="button" onClick={() => downloadDocument()}>
-              Download PDF
-            </button>
+                <Input
+                  type="text"
+                  label="First name"
+                  placeholder="First name"
+                  value={expense.firstName}
+                  onChange={(e) =>
+                    setExpense({ ...expense, firstName: e.target.value })
+                  }
+                />
+
+                <Input
+                  label="Address"
+                  type="text"
+                  placeholder="Address"
+                  onChange={(e) =>
+                    setExpense({ ...expense, address: e.target.value })
+                  }
+                  value={expense.address}
+                />
+                <Input
+                  label="IBAN"
+                  type="text"
+                  placeholder="IBAN"
+                  onChange={(e) =>
+                    setExpense({ ...expense, iban: e.target.value })
+                  }
+                  value={expense.iban}
+                />
+              </section>
+            </div>
+            <div className="flex flex-col gap-2 m-2 min-[250px]">
+              <section className="flex flex-col gap-2 m-2">
+                <span>Receipt details</span>
+
+                <Input
+                  label="Budgetary Item"
+                  type="text"
+                  placeholder="Budgetary Item"
+                  onChange={(e) =>
+                    setExpense({ ...expense, committee: e.target.value })
+                  }
+                  value={expense.committee}
+                />
+                <Input
+                  label="Purpose"
+                  type="text"
+                  placeholder="Purpose"
+                  onChange={(e) =>
+                    setExpense({ ...expense, purpose: e.target.value })
+                  }
+                  value={expense.purpose}
+                />
+
+                <Input
+                  label="Amount"
+                  type="number"
+                  max={9999}
+                  placeholder="Amount in CHF"
+                  onChange={(e) =>
+                    setExpense({
+                      ...expense,
+                      amount: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  value={expense.amount}
+                />
+                <Input
+                  label="Date on receipt"
+                  type="date"
+                  placeholder="Date on receipt"
+                  value={expense.dateReceipt}
+                  onChange={(e) =>
+                    setExpense({ ...expense, dateReceipt: e.target.value })
+                  }
+                />
+                <div className="flex gap-2">
+                  <div className="flex-grow">
+                    <Input
+                      label="Today's date"
+                      type="date"
+                      placeholder="Todays date"
+                      value={expense.dateToday}
+                      onChange={(e) =>
+                        setExpense({ ...expense, dateToday: e.target.value })
+                      }
+                    />
+                  </div>
+                  <button type="button">Today</button>
+                </div>
+
+                <Input
+                  label="Comments"
+                  type="text"
+                  placeholder="Comments"
+                  onChange={(e) =>
+                    setExpense({ ...expense, comments: e.target.value })
+                  }
+                  value={expense.comments}
+                />
+              </section>
+
+              <section className="flex flex-col gap-2 m-2">
+                <SignaturePad
+                  onClear={() => {
+                    setExpense({ ...expense, signatureReciever: "" });
+                  }}
+                  data={expense.signatureReciever}
+                  onData={(data) => {
+                    setExpense({
+                      ...expense,
+                      signatureReciever: data,
+                    });
+                  }}
+                  label="Your signature"
+                ></SignaturePad>
+
+                <SignaturePad
+                  onClear={() => {
+                    setExpense({ ...expense, signatureBoard: "" });
+                  }}
+                  data={expense.signatureBoard}
+                  onData={(data) => {
+                    setExpense({
+                      ...expense,
+                      signatureBoard: data,
+                    });
+                  }}
+                  label="Boardmemeber signature"
+                ></SignaturePad>
+              </section>
+            </div>
           </form>
         </main>
         <aside className="preview">
-          <div className="pdfContainer">
-            <div className="pdf">
-              <iframe src={pdfSrc} title="pdf" />
-            </div>
+          <div className="flex gap-2 my-2">
+            <Button onClick={() => previewDocument()}>Preview PDF</Button>
+            <Button type="button" onClick={() => downloadDocument()}>
+              Download PDF
+            </Button>
+          </div>
+          <div>
+            <iframe src={pdfSrc} title="pdf" className="w-[400px] h-[600px]" />
           </div>
         </aside>
-        <aside className="savedExpenses">
-          <SavedExpensesPane></SavedExpensesPane>
-        </aside>
-      </div>
+      </section>
+    </>
+  );
+}
+
+function newExpense(template: Partial<ExpenseInfo>): ExpenseInfo {
+  return {
+    formName: "New Expense",
+    internalNote: "",
+    lastName: "",
+    firstName: "",
+    address: "",
+    iban: "",
+    committee: "",
+    purpose: "",
+    amount: 0,
+    dateReceipt: "",
+    dateToday: "",
+    comments: "",
+    signatureReciever: "",
+    signatureBoard: "",
+    ...template,
+    uuid: uuidv4(),
+  };
+}
+
+function DocumentTab(props: {
+  onClick?: () => void;
+  isActive?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={classNames({
+        "min-w-[250px] h-[100px] flex flex-col justify-center p-3 items-center bg-zinc-800 rounded-xl gap-2 group cursor-pointer dark:hover:bg-zinc-700":
+          true,
+        "bg-zinc-700": props.isActive,
+      })}
+      onClick={props.onClick}
+    >
+      {props.children}
     </div>
   );
 }
 
-function SavedExpensesPaneItem(props: {
-  expense: ExpenseInfo;
-  onDelete: () => void;
-  onLoad: () => void;
-}) {
-  return (
-    <li>
-      <p>Purpose: {props.expense.purpose}</p>
-      <p>Amount: {props.expense.amount} CHF</p>
-      <div className="actions">
-        <button onClick={props.onDelete}>Delete</button>
-        <button onClick={props.onLoad}>Load</button>
-      </div>
-    </li>
-  );
+function getStorageValue<T>(key: string, defaultValue: T) {
+  // getting stored value
+  const saved = localStorage.getItem(key);
+  if (!saved) return defaultValue;
+  const initial = JSON.parse(saved) as T;
+  return initial;
 }
 
-// TODO improve delete and load to net create function for each item
-function SavedExpensesPane() {
-  const [savedExpenses, setSavedExpense] = useAtom(savedExpensesAtom);
-  const [expense, setExpense] = useAtom(currentFormStateAtom);
+export const useLocalStorage: <T>(
+  key: string,
+  defaultValue: T
+) => [T, React.Dispatch<React.SetStateAction<T>>] = (key, defaultValue) => {
+  const [value, setValue] = useState(() => {
+    return getStorageValue(key, defaultValue);
+  });
+
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue];
+};
+
+function useDocumentStore<T extends { uuid: string }>(prefix: string) {
+  const [keys, setKeys] = useLocalStorage(`${prefix}-doclist`, [] as string[]);
+  const [docs, setDocs] = useState([] as T[]);
+
+  // refresh docs when keys change
+  useEffect(() => {
+    const docs = keys.map((key) =>
+      getStorageValue<any>(`${prefix}-${key}`, null)
+    );
+    setDocs(docs);
+  }, [keys]);
+
+  const updateDoc = (doc: T) => {
+    if (!keys.includes(doc.uuid)) {
+      throw new Error("Document not in list");
+    }
+    const key = `${prefix}-${doc.uuid}`;
+    localStorage.setItem(key, JSON.stringify(doc));
+    setDocs(docs.map((d) => (d.uuid === doc.uuid ? { ...doc } : d)));
+  };
+
+  const addDoc = (doc: T) => {
+    if (keys.includes(doc.uuid)) {
+      throw new Error("Document already in list");
+    }
+    const key = `${prefix}-${doc.uuid}`;
+    localStorage.setItem(key, JSON.stringify(doc));
+    setKeys([...keys, doc.uuid]);
+    // Docs update is handled by useEffect
+  };
+
+  const removeDoc = (doc: T) => {
+    if (!keys.includes(doc.uuid)) {
+      throw new Error("Document not in list");
+    }
+    const key = `${prefix}-${doc.uuid}`;
+    localStorage.removeItem(key);
+    setKeys(keys.filter((k) => k !== doc.uuid));
+    // Docs update is handled by useEffect
+  };
+
+  return {
+    keys,
+    docs,
+    updateDoc,
+    addDoc,
+    removeDoc,
+  };
+}
+
+const TEMPLATES: Record<string, Partial<ExpenseInfo>> = {
+  "CTF-food": {
+    formName: "CTF Food",
+    committee: "x031 Online CTF",
+    purpose: "Food for online ctf",
+  },
+  "CTF-organizers": {
+    formName: "CTF Organizers",
+    committee: "CTF organizers prize fond",
+  },
+};
+
+function App() {
+  const {
+    keys,
+    docs: expenses,
+    updateDoc: updateExpense,
+    addDoc: addExpense,
+    removeDoc: removeExpense,
+  } = useDocumentStore<ExpenseInfo>("expense");
+
+  const [currentExpense, setCurrentExpense] = useState<string>("");
+
+  console.log(keys, expenses, currentExpense);
+
+  useEffect(() => {});
+
+  const expense = expenses.find((e) => e?.uuid === currentExpense);
+
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(
+    Object.keys(TEMPLATES)[0]
+  );
 
   return (
-    <div className="savedExpensesPane">
-      <h3>Saved expenses</h3>
-      <ul>
-        {savedExpenses.map((expense, i) => (
-          <SavedExpensesPaneItem
-            expense={expense}
-            key={i}
-            onDelete={() =>
-              setSavedExpense((old) => old.filter((e) => e != expense))
-            }
-            onLoad={() => setExpense(expense)}
-          />
-        ))}
-        <li>
-          <button
-            onClick={() =>
-              setSavedExpense((old) => {
-                return [...old, expense];
-              })
-            }
+    <div className="App">
+      <header className="px-4 py-2">
+        <h1>Spesenformularinator</h1>
+      </header>
+      <section className="flex px-4 mb-4 border-b-2 border-t-2 border-zinc-800 py-4 gap-4 max-w-[100vw] overflow-x-scroll">
+        <DocumentTab>
+          <div
+            className="dark:text-zinc-400 flex gap-2 items-baseline"
+            onClick={() => {
+              const exp = newExpense(TEMPLATES[selectedTemplate]);
+              addExpense(exp);
+              setCurrentExpense(exp.uuid);
+            }}
           >
-            Add
-          </button>
-        </li>
-      </ul>
+            <span className="text-2xl">+</span>
+            <span>New expense form</span>
+          </div>
+          <select
+            value={selectedTemplate}
+            onChange={(ev) => setSelectedTemplate(ev.target.value)}
+          >
+            {Object.entries(TEMPLATES).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v.formName}
+              </option>
+            ))}
+          </select>
+        </DocumentTab>
+        {expenses.map((e) => (
+          <DocumentTab
+            onClick={() => setCurrentExpense(e.uuid)}
+            isActive={e.uuid === currentExpense}
+          >
+            {e.formName}
+            <div className="flex gap-2">
+              <Button
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  removeExpense(e);
+                }}
+              >
+                Delete
+              </Button>
+              <Button
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  const exp = newExpense(
+                    expenses.find((e) => e.uuid === currentExpense) ?? {}
+                  );
+                  addExpense(exp);
+                  setCurrentExpense(exp.uuid);
+                }}
+              >
+                Duplicate
+              </Button>
+            </div>
+          </DocumentTab>
+        ))}
+      </section>
+      {expense && (
+        <ExpenseForm
+          expense={expense}
+          setExpense={(updatedExpense) => updateExpense(updatedExpense)}
+        ></ExpenseForm>
+      )}
     </div>
   );
 }
