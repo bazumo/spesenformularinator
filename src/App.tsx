@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FileSaver from "file-saver";
 import { snakeCase } from "change-case";
 import { createExpensePDF } from "./createExpensePDF";
@@ -9,6 +9,7 @@ import { Input } from "./Input";
 import { Button } from "./Button";
 import { SignaturePad } from "./SignaturePad";
 import { useDocumentStore } from "./useDocumentStore";
+import toast, { Toaster } from "react-hot-toast";
 
 export interface ExpenseMetadata {
   uuid: string;
@@ -300,6 +301,7 @@ function App() {
     updateDoc: updateExpense,
     addDoc: addExpense,
     removeDoc: removeExpense,
+    upsertDoc: upsertExpense,
   } = useDocumentStore<ExpenseInfo>("expense");
 
   const [currentExpense, setCurrentExpense] = useState<string>("");
@@ -310,8 +312,24 @@ function App() {
     Object.keys(TEMPLATES)[0]
   );
 
+  useEffect(() => {
+    // Process imports
+    console.log(window.location);
+
+    const [action, data] = decodeURIComponent(window.location.hash).split(".");
+    console.log(action, data);
+    if (action === "#import") {
+      const exp = newExpense(JSON.parse(atob(data)));
+      upsertExpense(exp);
+      toast.success(`Imported expense ${exp.formName}`);
+      window.location.hash = "";
+      setCurrentExpense(exp.uuid);
+    }
+  });
+
   return (
     <div className="App">
+      <Toaster />
       <header className="px-4 py-2">
         <h1>Spesenformularinator</h1>
       </header>
@@ -365,6 +383,28 @@ function App() {
                 }}
               >
                 Duplicate
+              </Button>
+              <Button
+                onClick={(ev) => {
+                  ev.stopPropagation();
+
+                  const url =
+                    window.location.origin +
+                    window.location.pathname +
+                    "#import." +
+                    btoa(JSON.stringify(e));
+
+                  navigator.clipboard.writeText(url).then(
+                    function () {
+                      toast.success("Copied URL to clipboard");
+                    },
+                    function (err) {
+                      toast.error("Failed to copy URL to clipboard");
+                    }
+                  );
+                }}
+              >
+                Export URL
               </Button>
             </div>
           </DocumentTab>

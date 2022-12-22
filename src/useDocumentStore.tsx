@@ -34,6 +34,14 @@ export function useDocumentStore<T extends { uuid: string }>(prefix: string) {
     setDocs(docs);
   }, [keys]);
 
+  const upsertDoc = (doc: T) => {
+    if (keys.includes(doc.uuid)) {
+      updateDoc(doc);
+    } else {
+      addDoc(doc);
+    }
+  };
+
   const updateDoc = (doc: T) => {
     if (!keys.includes(doc.uuid)) {
       throw new Error("Document not in list");
@@ -67,6 +75,7 @@ export function useDocumentStore<T extends { uuid: string }>(prefix: string) {
     keys,
     docs,
     updateDoc,
+    upsertDoc,
     addDoc,
     removeDoc,
   };
