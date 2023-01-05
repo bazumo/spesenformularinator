@@ -10,26 +10,39 @@ import { Button } from "./Button";
 import { SignaturePad } from "./SignaturePad";
 import { useDocumentStore } from "./useDocumentStore";
 import toast, { Toaster } from "react-hot-toast";
+import { useAtom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 
 export interface ExpenseMetadata {
   uuid: string;
   formName: string;
   internalNote: string;
 }
-export type ExpenseInfo = ExpenseMetadata & {
-  firstName: string;
-  lastName: string;
-  committee: string;
-  purpose: string;
-  amount: number;
-  dateReceipt: string;
-  dateToday: string;
-  signatureReciever: string;
-  signatureBoard: string;
-  comments: string;
-  address: string;
-  iban: string;
-};
+
+export interface ExpenseQuestorData {
+  beleg: string;
+  gegenBeleg: string;
+  accountDebit: string;
+  accountCredit: string;
+}
+
+export type ExpenseInfo = ExpenseMetadata &
+  ExpenseQuestorData & {
+    firstName: string;
+    lastName: string;
+    committee: string;
+    purpose: string;
+    amount: number;
+    dateReceipt: string;
+    dateToday: string;
+    signatureReciever: string;
+    signatureBoard: string;
+    comments: string;
+    address: string;
+    iban: string;
+  };
+
+const questorModeAtom = atomWithStorage("questorMode", false);
 
 function ExpenseForm(props: {
   expense: ExpenseInfo;
@@ -61,6 +74,24 @@ function ExpenseForm(props: {
     FileSaver.saveAs(file, fileName);
   };
 
+  const [questorMode] = useAtom(questorModeAtom);
+
+  function exportToCsv(expense: ExpenseInfo): void {
+    console.log(expense);
+    const csv = `Date	Doc	GegenBeleg	Description	AccountDebit	AccountCredit	Amount
+${expense.dateReceipt}	${expense.beleg}	${expense.gegenBeleg}	${expense.purpose}	${expense.accountDebit}	${expense.accountCredit}	${expense.amount}
+`;
+
+    copyToClipboard(csv).then(
+      function () {
+        toast.success("Copied CSV to clipboard");
+      },
+      function (err) {
+        toast.error("Failed to copy CSV to clipboard");
+      }
+    );
+  }
+
   return (
     <>
       <section className="px-4 py-2 flex flex-wrap flex-nowrap">
@@ -89,7 +120,7 @@ function ExpenseForm(props: {
                 />
               </section>
 
-              <section className="flex flex-col gap-2 m-2">
+              <section className="flex flex-col gap-2">
                 <span>Form data</span>
 
                 <Input
@@ -237,7 +268,7 @@ function ExpenseForm(props: {
             </div>
           </form>
         </main>
-        <aside className="preview">
+        <div>
           <div className="flex gap-2 my-2">
             <Button onClick={() => previewDocument()}>Preview PDF</Button>
             <Button type="button" onClick={() => downloadDocument()}>
@@ -247,7 +278,50 @@ function ExpenseForm(props: {
           <div>
             <iframe src={pdfSrc} title="pdf" className="w-[400px] h-[600px]" />
           </div>
-        </aside>
+        </div>
+
+        {questorMode && (
+          <section className="flex flex-col ml-4">
+            <span>Questor data</span>
+            <Button onClick={() => exportToCsv(expense)}>Export CSV</Button>
+            <Input
+              type="text"
+              label="Beleg"
+              placeholder=""
+              value={expense.beleg}
+              onChange={(e) =>
+                setExpense({ ...expense, beleg: e.target.value })
+              }
+            />
+            <Input
+              type="text"
+              label="Gegenbeleg"
+              placeholder=""
+              value={expense.gegenBeleg}
+              onChange={(e) =>
+                setExpense({ ...expense, gegenBeleg: e.target.value })
+              }
+            />
+            <Input
+              type="text"
+              label="Account debit"
+              placeholder=""
+              value={expense.accountDebit}
+              onChange={(e) =>
+                setExpense({ ...expense, accountDebit: e.target.value })
+              }
+            />
+            <Input
+              type="text"
+              label="Account credit"
+              placeholder="K-ALG 1010"
+              value={expense.accountCredit}
+              onChange={(e) =>
+                setExpense({ ...expense, accountCredit: e.target.value })
+              }
+            />
+          </section>
+        )}
       </section>
     </>
   );
@@ -269,6 +343,10 @@ function newExpense(template: Partial<ExpenseInfo>): ExpenseInfo {
     comments: "",
     signatureReciever: "",
     signatureBoard: "",
+    beleg: "",
+    gegenBeleg: "",
+    accountDebit: "",
+    accountCredit: "K-ALG 1010",
     ...template,
     uuid: uuidv4(),
   };
@@ -312,6 +390,8 @@ function App() {
     Object.keys(TEMPLATES)[0]
   );
 
+  const [questorMode, setQuestorMode] = useAtom(questorModeAtom);
+
   useEffect(() => {
     // Process imports
     console.log(window.location);
@@ -330,8 +410,18 @@ function App() {
   return (
     <div className="App">
       <Toaster />
-      <header className="px-4 py-2">
+      <header className="px-4 py-2 flex">
         <h1>Spesenformularinator</h1>
+        <div className="ml-auto flex gap-2 items-center">
+          <button
+            onClick={() => setQuestorMode(!questorMode)}
+            className={classNames({
+              invert: questorMode,
+            })}
+          >
+            QuestorInnen mode
+          </button>
+        </div>
       </header>
       <section className="flex px-4 mb-4 border-b-2 border-t-2 border-zinc-200 dark:border-zinc-800 py-4 gap-4 max-w-[100vw] overflow-x-scroll">
         <DocumentTab>
@@ -394,7 +484,7 @@ function App() {
                     "#import." +
                     btoa(JSON.stringify(e));
 
-                  navigator.clipboard.writeText(url).then(
+                  copyToClipboard(url).then(
                     function () {
                       toast.success("Copied URL to clipboard");
                     },
@@ -418,6 +508,10 @@ function App() {
       )}
     </div>
   );
+}
+
+function copyToClipboard(text: string) {
+  return navigator.clipboard.writeText(text);
 }
 
 export default App;
