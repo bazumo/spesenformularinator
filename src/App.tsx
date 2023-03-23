@@ -346,7 +346,7 @@ function newExpense(template: Partial<ExpenseInfo>): ExpenseInfo {
     iban: "",
     committee: "",
     purpose: "",
-    amount: 0,
+    amount: "0",
     dateReceipt: "",
     dateToday: "",
     comments: "",
