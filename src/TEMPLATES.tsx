@@ -10,4 +10,9 @@ export const TEMPLATES: Record<string, Partial<ExpenseInfo>> = {
     formName: "CTF Organizers",
     committee: "CTF organizers prize fond",
   },
+  "Insomnihack Trasnport": {
+    committee: "x032 Insomni Hack (Lausanne)",
+    formName: "Insomnihack SBB reimbursement",
+    purpose: "Transport",
+  },
 };
