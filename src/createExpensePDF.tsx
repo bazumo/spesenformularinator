@@ -53,11 +53,14 @@ export async function createExpensePDF(
 
   page.setFontSize(20);
 
-  const digits_franken = Math.floor(expense.amount)
+  const digits_franken = Math.floor(Number(expense.amount))
     .toString()
     .padStart(4, " ")
     .split("");
-  const digits_rappen = expense.amount.toFixed(2).split(".")[1].split("");
+  const digits_rappen = Number(expense.amount)
+    .toFixed(2)
+    .split(".")[1]
+    .split("");
 
   page.drawText(digits_franken[0], {
     x: OFFSETS.AMOUNT[0] + 130,

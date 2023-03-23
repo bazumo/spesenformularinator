@@ -32,7 +32,7 @@ export type ExpenseInfo = ExpenseMetadata &
     lastName: string;
     committee: string;
     purpose: string;
-    amount: number;
+    amount: string;
     dateReceipt: string;
     dateToday: string;
     signatureReciever: string;
@@ -188,13 +188,12 @@ ${expense.dateReceipt}	${expense.beleg}	${expense.gegenBeleg}	${expense.purpose}
 
                 <Input
                   label="Amount"
-                  type="number"
-                  max={9999}
                   placeholder="Amount in CHF"
+                  pattern="[0-9]*\.*[0-9]*"
                   onChange={(e) =>
                     setExpense({
                       ...expense,
-                      amount: parseFloat(e.target.value) || 0,
+                      amount: e.target.value,
                     })
                   }
                   value={expense.amount}
@@ -220,7 +219,17 @@ ${expense.dateReceipt}	${expense.beleg}	${expense.gegenBeleg}	${expense.purpose}
                       }
                     />
                   </div>
-                  <button type="button">Today</button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpense({
+                        ...expense,
+                        dateToday: new Date().toISOString().split("T")[0],
+                      })
+                    }
+                  >
+                    Today
+                  </button>
                 </div>
 
                 <Input
